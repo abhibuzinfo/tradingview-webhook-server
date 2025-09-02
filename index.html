@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>AI Trading Agent - Newsletter to Execution</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+    <script>
+        // Backup functions in case main script fails to load
+        window.testChatGPTConnection = function() {
+            if (typeof window.testChatGPTConnection === 'function') {
+                window.testChatGPTConnection();
+            } else {
+                alert('ChatGPT test function not loaded. Please refresh the page.');
+                console.error('testChatGPTConnection function not found');
+            }
+        }
+        
+        // Backup Gmail functions
+        window.saveGmailSettings = function() {
+            console.log('Backup saveGmailSettings called');
+        };
+        
+        window.authenticateGmail = function() {
+            console.log('Backup authenticateGmail called');
+        };
+        
+        window.fetchNewsletterEmails = function() {
+            console.log('Backup fetchNewsletterEmails called');
+        };
+        
+        window.startAutoFetch = function() {
+            console.log('Backup startAutoFetch called');
+        };
+        
+        window.stopAutoFetch = function() {
+            console.log('Backup stopAutoFetch called');
+        };
+        
+        window.selectEmail = function(emailId) {
+            console.log('Backup selectEmail called with:', emailId);
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-robot"></i> AI Trading Agent</h1>
+            <p class="subtitle">Newsletter Analysis → ChatGPT → TradingView Execution</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Newsletter Input Section -->
+            <section class="newsletter-section">
+                <h2><i class="fas fa-newspaper"></i> Newsletter Content Analysis</h2>
+                <div class="newsletter-container">
+                    
+                    <!-- Gmail Integration -->
+                    <div class="gmail-panel">
+                        <h4><i class="fas fa-envelope"></i> Gmail Integration</h4>
+                        <div class="config-grid">
+                            <div class="config-item">
+                                <label for="gmail-email">Gmail Address</label>
+                                <input type="email" id="gmail-email" placeholder="your-email@gmail.com" onchange="saveGmailSettings()">
+                            </div>
+                            <div class="config-item">
+                                <label for="newsletter-sender">Newsletter Sender Filter</label>
+                                <input type="text" id="newsletter-sender" placeholder="e.g., newsletter@trading.com" onchange="saveGmailSettings()">
+                            </div>
+                            <div class="config-item">
+                                <label for="email-fetch-count">Number of Emails to Fetch</label>
+                                <input type="number" id="email-fetch-count" placeholder="5" value="5" min="1" max="20" onchange="saveGmailSettings()">
+                            </div>
+                            <div class="config-item">
+                                <label for="auto-fetch-interval">Auto Fetch Interval (minutes)</label>
+                                <input type="number" id="auto-fetch-interval" placeholder="15" value="15" min="5" max="60" onchange="saveGmailSettings()">
+                            </div>
+                        </div>
+                        
+                        <!-- OAuth 2.0 Configuration -->
+                        <div class="oauth-config">
+                            <h5><i class="fas fa-cog"></i> OAuth 2.0 Configuration</h5>
+                            <div class="config-grid">
+                                <div class="config-item">
+                                    <label for="oauth-client-id">Google Client ID</label>
+                                    <input type="text" id="oauth-client-id" placeholder="123456789-abcdef.apps.googleusercontent.com" onchange="saveOAuthConfig()">
+                                </div>
+                                <div class="config-item">
+                                    <label for="oauth-client-secret">Google Client Secret</label>
+                                    <input type="password" id="oauth-client-secret" placeholder="Enter your client secret" onchange="saveOAuthConfig()">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gmail-actions">
+                            <button class="btn btn-primary" onclick="authenticateGmail()">
+                                <i class="fas fa-key"></i> Authenticate Gmail
+                            </button>
+                            <button class="btn btn-info" onclick="fetchNewsletterEmails()">
+                                <i class="fas fa-download"></i> Fetch Newsletter Emails
+                            </button>
+                            <button class="btn btn-success" onclick="startAutoFetch()">
+                                <i class="fas fa-play"></i> Start Auto Fetch
+                            </button>
+                            <button class="btn btn-danger" onclick="stopAutoFetch()">
+                                <i class="fas fa-stop"></i> Stop Auto Fetch
+                            </button>
+                        </div>
+                        
+                        <div class="gmail-oauth-actions">
+                            <button class="btn btn-warning" onclick="testGmailAPI()">
+                                <i class="fas fa-wifi"></i> Test Gmail API
+                            </button>
+                            <button class="btn btn-info" onclick="refreshGmailToken()">
+                                <i class="fas fa-sync"></i> Refresh Token
+                            </button>
+                            <button class="btn btn-success" onclick="checkStoredCredentials()">
+                                <i class="fas fa-search"></i> Check Credentials
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearGmailOAuth()">
+                                <i class="fas fa-trash"></i> Clear OAuth
+                            </button>
+                        </div>
+                        <div class="gmail-status">
+                            <div id="gmail-status" class="status disconnected">
+                                <i class="fas fa-circle"></i>
+                                <span>Gmail Not Connected</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email List -->
+                    <div class="email-list-panel">
+                        <h4><i class="fas fa-inbox"></i> Newsletter Emails</h4>
+                        <div id="email-list" class="email-list">
+                            <div class="email-placeholder">
+                                <i class="fas fa-inbox"></i>
+                                <p>No emails fetched yet. Click "Fetch Newsletter Emails" to load emails.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Newsletter Input -->
+                    <div class="manual-input-panel">
+                        <h4><i class="fas fa-edit"></i> Manual Newsletter Input</h4>
+                        <div class="input-group">
+                            <label for="newsletter-text">Paste Newsletter or Trading Plan Content</label>
+                            <textarea id="newsletter-text" placeholder="Paste your newsletter content, trading plan, or market analysis here. Include levels, support/resistance, entry/exit points, and any other relevant trading information.
+
+Example:
+'ES futures trading plan for today. Current price at 4500. Looking for long entry at 4495 with stop at 4485. Targets at 4510, 4520, and 4530. Support at 4480, resistance at 4525. Bullish bias due to strong earnings and technical breakout.'"></textarea>
+                        </div>
+                        
+                        <div class="newsletter-actions">
+                            <button class="btn btn-primary" onclick="analyzeWithChatGPT()">
+                                <i class="fas fa-robot"></i> Analyze & Build Plan
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearNewsletterInputs()">
+                                <i class="fas fa-eraser"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ChatGPT Integration -->
+            <section class="chatgpt-section">
+                <h2><i class="fab fa-openai"></i> ChatGPT Configuration</h2>
+                <div class="chatgpt-container">
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label for="openai-api-key">OpenAI API Key</label>
+                            <input type="password" id="openai-api-key" placeholder="Enter your OpenAI API key">
+                        </div>
+                        <div class="config-item">
+                            <label for="chatgpt-model">Model</label>
+                            <select id="chatgpt-model">
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                <option value="gpt-4">GPT-4</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="chatgpt-actions">
+                        <button class="btn btn-info" onclick="testChatGPTConnection()">
+                            <i class="fas fa-wifi"></i> Test Connection
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearChatGPTCredentials()">
+                            <i class="fas fa-eraser"></i> Clear Credentials
+                        </button>
+                    </div>
+
+                    <div class="chatgpt-response">
+                        <h3><i class="fas fa-comments"></i> ChatGPT Analysis</h3>
+                        <div id="chatgpt-response-display" class="response-display">
+                            <div class="response-placeholder">
+                                <i class="fas fa-robot"></i>
+                                <p>Click "Analyze & Build Plan" to get AI-powered analysis of your trade plan</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TradingView Integration -->
+            <section class="tradingview-section">
+                <h2><i class="fas fa-chart-line"></i> TradingView Execution</h2>
+                <div class="tradingview-container">
+                    <div class="connection-panel">
+                        <div class="config-grid">
+                            <div class="config-item">
+                                <label for="trading-symbol">Trading Symbol</label>
+                                <input type="text" id="trading-symbol" placeholder="e.g., ES1!, NQ1!, YM1!" value="ES1!" onchange="setTradingSymbol(this.value)">
+                            </div>
+                            <div class="config-item">
+                                <label for="broker-select">Select Broker</label>
+                                <select id="broker-select" onchange="setBroker(this.value)">
+                                    <option value="">Choose your broker...</option>
+                                    <option value="amp-live">AMP Live</option>
+                                    <option value="tradovate">Tradovate</option>
+                                    <option value="ninjatrader">NinjaTrader</option>
+                                    <option value="tradestation">TradeStation</option>
+                                    <option value="interactive-brokers">Interactive Brokers</option>
+                                    <option value="td-ameritrade">TD Ameritrade</option>
+                                    <option value="etrade">E*TRADE</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                            <div class="config-item">
+                                <label for="order-type">Order Type</label>
+                                <select id="order-type" onchange="setOrderType(this.value)">
+                                    <option value="limit">Limit</option>
+                                    <option value="market">Market</option>
+                                    <option value="stop">Stop</option>
+                                    <option value="stop-limit">Stop Limit</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- TradingView Credentials -->
+                        <div class="credentials-panel">
+                            <h4><i class="fas fa-key"></i> TradingView Credentials</h4>
+                            <div class="config-grid">
+                                <div class="config-item">
+                                    <label for="tv-username">Username</label>
+                                    <input type="text" id="tv-username" placeholder="TradingView username" onchange="saveTVCredentials()">
+                                </div>
+                                <div class="config-item">
+                                    <label for="tv-password">Password</label>
+                                    <input type="password" id="tv-password" placeholder="TradingView password" onchange="saveTVCredentials()">
+                                </div>
+                                <div class="config-item">
+                                    <label for="tv-api-key">API Key (Optional)</label>
+                                    <input type="password" id="tv-api-key" placeholder="TradingView API key" onchange="saveTVCredentials()">
+                                </div>
+                            </div>
+                            <div class="credentials-actions">
+                                <button class="btn btn-info" onclick="testTVCredentials()">
+                                    <i class="fas fa-check"></i> Test Credentials
+                                </button>
+                                <button class="btn btn-secondary" onclick="clearTVCredentials()">
+                                    <i class="fas fa-eraser"></i> Clear Credentials
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- High Frequency Trading Options -->
+                        <div class="hft-panel">
+                            <h4><i class="fas fa-bolt"></i> High Frequency Trading Options</h4>
+                            <div class="config-grid">
+                                <div class="config-item">
+                                    <label for="hft-enabled">Enable HFT Mode</label>
+                                    <select id="hft-enabled" onchange="toggleHFTMode(this.value)">
+                                        <option value="false">Disabled</option>
+                                        <option value="true">Enabled</option>
+                                    </select>
+                                </div>
+                                <div class="config-item">
+                                    <label for="hft-interval">HFT Interval (seconds)</label>
+                                    <input type="number" id="hft-interval" placeholder="5" value="5" min="1" max="60" onchange="setHFTInterval(this.value)">
+                                </div>
+                                <div class="config-item">
+                                    <label for="hft-max-trades">Max Trades per Session</label>
+                                    <input type="number" id="hft-max-trades" placeholder="10" value="10" min="1" max="100" onchange="setHFTMaxTrades(this.value)">
+                                </div>
+                                <div class="config-item">
+                                    <label for="hft-profit-target">Profit Target (%)</label>
+                                    <input type="number" id="hft-profit-target" placeholder="0.5" value="0.5" min="0.1" max="5" step="0.1" onchange="setHFTProfitTarget(this.value)">
+                                </div>
+                            </div>
+                            <div class="hft-actions">
+                                <button class="btn btn-warning" onclick="startHFTSession()">
+                                    <i class="fas fa-play"></i> Start HFT Session
+                                </button>
+                                <button class="btn btn-danger" onclick="stopHFTSession()">
+                                    <i class="fas fa-stop"></i> Stop HFT Session
+                                </button>
+                                <button class="btn btn-info" onclick="viewHFTSession()">
+                                    <i class="fas fa-chart-bar"></i> View HFT Stats
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="connection-actions">
+                            <button class="btn btn-success" onclick="connectTradingView()">
+                                <i class="fas fa-plug"></i> Connect to TradingView
+                            </button>
+                            <button class="btn btn-danger" onclick="disconnectTradingView()">
+                                <i class="fas fa-unplug"></i> Disconnect
+                            </button>
+                        </div>
+                        
+                        <div class="connection-status">
+                            <div id="connection-status" class="status disconnected">
+                                <i class="fas fa-circle"></i>
+                                <span>Disconnected</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bracket Order Details -->
+                    <div class="bracket-orders">
+                        <h3><i class="fas fa-brackets-curly"></i> Bracket Order Details</h3>
+                        <div id="bracket-order-display" class="bracket-display">
+                            <div class="bracket-placeholder">
+                                <i class="fas fa-chart-line"></i>
+                                <p>Run ChatGPT analysis to see bracket order details</p>
+                            </div>
+                        </div>
+                        
+                        <div class="execution-actions">
+                            <button class="btn btn-primary" onclick="pushToTradingView()">
+                                <i class="fas fa-paper-plane"></i> Execute Bracket Orders
+                            </button>
+                            <button class="btn btn-info" onclick="testWebhookServer()">
+                                <i class="fas fa-wifi"></i> Test Webhook Server
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearBracketOrders()">
+                                <i class="fas fa-eraser"></i> Clear Orders
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // Add cache-busting parameter to script loading
+        document.write('<script src="script.js?v=1.2&t=20250831&r=' + Date.now() + '"><\/script>');
+    </script>
+    
+    <!-- Fallback functions in case script.js fails to load -->
+    <script>
+        // Ensure checkStoredCredentials is available
+        if (typeof window.checkStoredCredentials === 'undefined') {
+            window.checkStoredCredentials = function() {
+                console.log('🔍 Fallback checkStoredCredentials called');
+                if (window.gmailIntegration) {
+                    window.gmailIntegration.debugStoredCredentials();
+                } else {
+                    console.error('❌ gmailIntegration not available');
+                }
+            };
+        }
+    </script>
+</body>
+</html>
