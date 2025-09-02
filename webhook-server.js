@@ -2,6 +2,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
+// For Node.js versions < 18, uncomment the next line:
+const fetch = require('node-fetch');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -112,10 +115,86 @@ app.post('/api/execute-order', (req, res) => {
     }
 });
 
-// Execute order (simulate broker integration)
+// Execute order via AMP Live API
 async function executeOrder(order) {
     try {
         console.log(`🔄 Executing order ${order.id}: ${order.side} ${order.quantity} ${order.symbol}`);
+        
+        // Check if we have AMP Live credentials
+        if (!process.env.AMP_LIVE_API_KEY || !process.env.AMP_LIVE_SECRET) {
+            console.log('⚠️ AMP Live credentials not found, falling back to simulation');
+            return await simulateOrderExecution(order);
+        }
+        
+        // AMP Live API endpoint (paper trading)
+        const apiUrl = process.env.AMP_LIVE_PAPER_URL || 'https://paper-api.ampletrader.com';
+        
+        // Prepare order for AMP Live
+        const ampOrder = {
+            symbol: order.symbol,
+            side: order.side.toUpperCase(),
+            quantity: parseInt(order.quantity),
+            orderType: order.type.toUpperCase(),
+            price: parseFloat(order.price),
+            accountId: process.env.AMP_LIVE_ACCOUNT_ID,
+            timeInForce: 'DAY'
+        };
+        
+        // Add stop loss and take profit if provided
+        if (order.stopLoss) {
+            ampOrder.stopLoss = parseFloat(order.stopLoss);
+        }
+        if (order.takeProfit) {
+            ampOrder.takeProfit = parseFloat(order.takeProfit);
+        }
+        
+        console.log(`📤 Sending order to AMP Live:`, ampOrder);
+        
+        // Execute order via AMP Live API
+        const response = await fetch(`${apiUrl}/v1/orders`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.AMP_LIVE_API_KEY}`,
+                'Content-Type': 'application/json',
+                'X-API-Secret': process.env.AMP_LIVE_SECRET
+            },
+            body: JSON.stringify(ampOrder)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`AMP Live API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log(`✅ AMP Live order executed successfully:`, result);
+        
+        // Update order status
+        order.status = 'Submitted';
+        order.executionPrice = order.price;
+        order.executionTime = new Date().toISOString();
+        order.broker = 'AMP Live';
+        order.ampLiveOrderId = result.orderId;
+        order.message = 'Order submitted to AMP Live';
+        
+        // Move to order history
+        orderHistory.push(order);
+        pendingOrders = pendingOrders.filter(o => o.id !== order.id);
+        
+        console.log(`✅ Order ${order.id} submitted to AMP Live successfully`);
+        
+    } catch (error) {
+        console.error(`❌ AMP Live order execution failed:`, error);
+        
+        // Fallback to simulation if AMP Live fails
+        console.log('🔄 Falling back to simulated execution');
+        await simulateOrderExecution(order);
+    }
+}
+
+// Fallback simulation function
+async function simulateOrderExecution(order) {
+    try {
+        console.log(`📊 Simulating order execution for ${order.symbol}`);
         
         // Simulate order execution delay
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -124,19 +203,16 @@ async function executeOrder(order) {
         order.status = 'Filled';
         order.executionPrice = order.price;
         order.executionTime = new Date().toISOString();
-        order.broker = order.broker || 'AMP Live';
+        order.broker = 'Simulated Broker (AMP Live Unavailable)';
         
         // Move to order history
-        orderHistory.push(order);
         pendingOrders = pendingOrders.filter(o => o.id !== order.id);
+        orderHistory.push(order);
         
-        console.log(`✅ Order ${order.id} executed successfully`);
-        
-        // Here you would integrate with your actual broker API
-        // await brokerAPI.placeOrder(order);
+        console.log(`✅ Order ${order.id} simulated successfully`);
         
     } catch (error) {
-        console.error(`❌ Order ${order.id} execution failed:`, error);
+        console.error(`❌ Simulation failed for order ${order.id}:`, error);
         order.status = 'Failed';
         order.error = error.message;
     }
