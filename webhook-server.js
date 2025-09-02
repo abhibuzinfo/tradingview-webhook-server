@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const RithmicAPI = require('./rithmic-api-integration');
 
 // For Node.js versions < 18, uncomment the next line:
 const fetch = require('node-fetch');
@@ -20,6 +21,46 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Store pending orders
 let pendingOrders = [];
 let orderHistory = [];
+
+// Initialize Rithmic API
+let rithmicAPI = null;
+
+// Initialize Rithmic API if credentials are available
+function initializeRithmicAPI() {
+    if (process.env.RITHMIC_USERNAME && process.env.RITHMIC_PASSWORD && process.env.RITHMIC_ACCOUNT_ID) {
+        console.log('🔌 Initializing Rithmic API...');
+        
+        rithmicAPI = new RithmicAPI({
+            username: process.env.RITHMIC_USERNAME,
+            password: process.env.RITHMIC_PASSWORD,
+            accountId: process.env.RITHMIC_ACCOUNT_ID,
+            environment: process.env.NODE_ENV === 'production' ? 'live' : 'paper'
+        });
+        
+        // Connect to Rithmic
+        rithmicAPI.connect().then(connected => {
+            if (connected) {
+                console.log('✅ Rithmic API connected successfully');
+            } else {
+                console.log('⚠️ Rithmic API connection failed, falling back to simulation');
+            }
+        }).catch(error => {
+            console.error('❌ Rithmic API connection error:', error);
+        });
+        
+        // Set up event listeners
+        rithmicAPI.on('orderPlaced', (order) => {
+            console.log('📊 Order placed via Rithmic:', order);
+        });
+        
+        rithmicAPI.on('orderError', (error) => {
+            console.error('❌ Rithmic order error:', error);
+        });
+        
+    } else {
+        console.log('⚠️ Rithmic credentials not found, using simulation mode');
+    }
+}
 
 // TradingView Webhook Endpoint
 app.post('/webhook/tradingview', (req, res) => {
@@ -115,78 +156,53 @@ app.post('/api/execute-order', (req, res) => {
     }
 });
 
-// Execute order via AMP Live API
+// Execute order via Rithmic API (AMP Live)
 async function executeOrder(order) {
     try {
         console.log(`🔄 Executing order ${order.id}: ${order.side} ${order.quantity} ${order.symbol}`);
         
-        // Check if we have AMP Live credentials
-        if (!process.env.AMP_LIVE_API_KEY || !process.env.AMP_LIVE_SECRET) {
-            console.log('⚠️ AMP Live credentials not found, falling back to simulation');
-            return await simulateOrderExecution(order);
+        // Check if Rithmic API is available and connected
+        if (rithmicAPI && rithmicAPI.connected) {
+            console.log('📤 Executing order via Rithmic API...');
+            
+            try {
+                // Execute order via Rithmic
+                const rithmicOrder = await rithmicAPI.placeOrder({
+                    symbol: order.symbol,
+                    side: order.side,
+                    quantity: order.quantity,
+                    type: order.type || 'MARKET',
+                    price: order.price
+                });
+                
+                // Update order status
+                order.status = 'Submitted';
+                order.executionPrice = order.price;
+                order.executionTime = new Date().toISOString();
+                order.broker = 'Rithmic/AMP Live';
+                order.rithmicOrderId = rithmicOrder.rithmicOrderId;
+                order.message = 'Order submitted via Rithmic API';
+                
+                // Move to order history
+                orderHistory.push(order);
+                pendingOrders = pendingOrders.filter(o => o.id !== order.id);
+                
+                console.log(`✅ Order ${order.id} submitted via Rithmic successfully`);
+                return;
+                
+            } catch (rithmicError) {
+                console.error('❌ Rithmic order execution failed:', rithmicError);
+                console.log('🔄 Falling back to simulation due to Rithmic error');
+            }
+        } else {
+            console.log('⚠️ Rithmic API not available, using simulation mode');
         }
         
-        // AMP Live API endpoint (paper trading)
-        const apiUrl = process.env.AMP_LIVE_PAPER_URL || 'https://paper-api.ampletrader.com';
-        
-        // Prepare order for AMP Live
-        const ampOrder = {
-            symbol: order.symbol,
-            side: order.side.toUpperCase(),
-            quantity: parseInt(order.quantity),
-            orderType: order.type.toUpperCase(),
-            price: parseFloat(order.price),
-            accountId: process.env.AMP_LIVE_ACCOUNT_ID,
-            timeInForce: 'DAY'
-        };
-        
-        // Add stop loss and take profit if provided
-        if (order.stopLoss) {
-            ampOrder.stopLoss = parseFloat(order.stopLoss);
-        }
-        if (order.takeProfit) {
-            ampOrder.takeProfit = parseFloat(order.takeProfit);
-        }
-        
-        console.log(`📤 Sending order to AMP Live:`, ampOrder);
-        
-        // Execute order via AMP Live API
-        const response = await fetch(`${apiUrl}/v1/orders`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.AMP_LIVE_API_KEY}`,
-                'Content-Type': 'application/json',
-                'X-API-Secret': process.env.AMP_LIVE_SECRET
-            },
-            body: JSON.stringify(ampOrder)
-        });
-        
-        if (!response.ok) {
-            throw new Error(`AMP Live API error: ${response.status} ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        console.log(`✅ AMP Live order executed successfully:`, result);
-        
-        // Update order status
-        order.status = 'Submitted';
-        order.executionPrice = order.price;
-        order.executionTime = new Date().toISOString();
-        order.broker = 'AMP Live';
-        order.ampLiveOrderId = result.orderId;
-        order.message = 'Order submitted to AMP Live';
-        
-        // Move to order history
-        orderHistory.push(order);
-        pendingOrders = pendingOrders.filter(o => o.id !== order.id);
-        
-        console.log(`✅ Order ${order.id} submitted to AMP Live successfully`);
+        // Fallback to simulation
+        await simulateOrderExecution(order);
         
     } catch (error) {
-        console.error(`❌ AMP Live order execution failed:`, error);
-        
-        // Fallback to simulation if AMP Live fails
-        console.log('🔄 Falling back to simulated execution');
+        console.error(`❌ Order execution failed:`, error);
         await simulateOrderExecution(order);
     }
 }
@@ -267,6 +283,9 @@ app.listen(PORT, () => {
     console.log(`🔧 Manual Orders: http://localhost:${PORT}/api/execute-order`);
     console.log(`📊 Order Status: http://localhost:${PORT}/api/orders`);
     console.log(`💚 Health Check: http://localhost:${PORT}/health`);
+    
+    // Initialize Rithmic API after server starts
+    initializeRithmicAPI();
 });
 
 module.exports = app;
