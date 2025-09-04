@@ -55,8 +55,22 @@
             <p class="subtitle">Newsletter Analysis → ChatGPT → TradingView Execution</p>
         </header>
 
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-button active" onclick="showTab('newsletter')">
+                <i class="fas fa-newspaper"></i> Newsletter Analysis
+            </button>
+            <button class="tab-button" onclick="showTab('chatgpt')">
+                <i class="fas fa-robot"></i> ChatGPT Config
+            </button>
+            <button class="tab-button" onclick="showTab('tradingview')">
+                <i class="fas fa-chart-bar"></i> TradingView Execution
+            </button>
+        </div>
+
         <div class="main-content">
             <!-- Newsletter Input Section -->
+            <div id="newsletter-tab" class="tab-content active">
             <section class="newsletter-section">
                 <h2><i class="fas fa-newspaper"></i> Newsletter Content Analysis</h2>
                 <div class="newsletter-container">
@@ -207,8 +221,54 @@ Example:
                     </div>
                 </div>
             </section>
+            </div>
 
-            <!-- TradingView Integration -->
+            <!-- ChatGPT Configuration Tab -->
+            <div id="chatgpt-tab" class="tab-content">
+            <section class="chatgpt-section">
+                <h2><i class="fas fa-robot"></i> ChatGPT Configuration</h2>
+                <div class="chatgpt-container">
+                    <div class="config-panel">
+                        <div class="config-grid">
+                            <div class="config-item">
+                                <label for="openai-api-key">OpenAI API Key</label>
+                                <input type="password" id="openai-api-key" placeholder="sk-..." onchange="saveChatGPTSettings()">
+                            </div>
+                            <div class="config-item">
+                                <label for="chatgpt-model">Model</label>
+                                <select id="chatgpt-model" onchange="saveChatGPTSettings()">
+                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended)</option>
+                                    <option value="gpt-4">GPT-4 (Advanced)</option>
+                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chatgpt-actions">
+                        <button class="btn btn-info" onclick="testChatGPTConnection()">
+                            <i class="fas fa-wifi"></i> Test Connection
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearChatGPTCredentials()">
+                            <i class="fas fa-eraser"></i> Clear Credentials
+                        </button>
+                    </div>
+
+                    <div class="chatgpt-response">
+                        <h3><i class="fas fa-comments"></i> ChatGPT Analysis</h3>
+                        <div id="chatgpt-response-display" class="response-display">
+                            <div class="response-placeholder">
+                                <i class="fas fa-robot"></i>
+                                <p>Click "Analyze & Build Plan" to get AI-powered analysis of your trade plan</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </div>
+
+            <!-- TradingView Integration Tab -->
+            <div id="tradingview-tab" class="tab-content">
             <section class="tradingview-section">
                 <h2><i class="fas fa-chart-line"></i> TradingView Execution</h2>
                 <div class="tradingview-container">
@@ -348,12 +408,39 @@ Example:
                     </div>
                 </div>
             </section>
+            </div>
         </div>
     </div>
 
     <script>
         // Add cache-busting parameter to script loading
         document.write('<script src="script.js?v=1.2&t=20250831&r=' + Date.now() + '"><\/script>');
+    </script>
+    
+    <!-- Tab functionality -->
+    <script>
+        function showTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            const selectedTab = document.getElementById(tabName + '-tab');
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
     </script>
     
     <!-- Fallback functions in case script.js fails to load -->
